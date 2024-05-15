@@ -20,6 +20,14 @@ phases:
   build:
     commands:
       - echo Build started on `date`
+      - echo Node version
+      - node --version
+      - echo Install jq
+      - npm install -g jq
+      - jq --version
+      - echo Retreive secret to env file...
+      - aws secretsmanager get-secret-value --secret-id dev/Web3-Wallet/Back-End --query SecretString --output text | jq -r 'to_entries|map("\(.key)=\(.value)")|.[]' > .env
+      - cat .env
       - echo Building the Docker image.
       - docker build -t $REPOSITORY_URI:latest .
       - docker tag $REPOSITORY_URI:latest $REPOSITORY_URI:$IMAGE_TAG
@@ -29,6 +37,6 @@ phases:
       - docker push $REPOSITORY_URI:latest
       - docker push $REPOSITORY_URI:$IMAGE_TAG
       - echo write definitions file...
-      - printf '[{"name":"web3-wallet-backend","imageUri":"%s"}]' $REPOSITORY_URI:$IMAGE_TAG > imagedefinitions.json
+      - printf '[{"name":"web3-wallet-backend","imageUri":"%s"}]' $REPOSITORY_URI:latest > imagedefinitions.json
 artifacts:
   files: imagedefinitions.json
