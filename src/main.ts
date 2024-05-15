@@ -11,6 +11,6 @@ async function bootstrap() {
   // eslint-disable-next-line @typescript-eslint/ban-ts-comment
   // @ts-ignore
   app.useWebSocketAdapter(new IoAdapter(app));
-  await app.listen(process.env.PORT || 8080);
+  await app.listen(process.env.PORT || 80);
 }
 bootstrap();
