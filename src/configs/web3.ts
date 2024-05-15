@@ -1,0 +1,12 @@
+export const WEB3_PROVIDER = 'https://data-seed-prebsc-1-s1.bnbchain.org:8545';
+export const CONTRACT_ADDRESS = '0xd40BcDC38C4fF1958416965F4704c622f8fffd80';
+export const DEFAULT_TOKEN_DECIMAL = 18;
+export const HERMES_PYTH_ENDPOINT = 'https://hermes.pyth.network/v2';
+export const SWAP_TOKEN_CONTRACT = '0x7170D5Ce1eD585eDC2C0591ec98144D905e396a0';
+export const SWAP_TOKEN_FACTORY_CONTRACT =
+  '0xdB1d10011AD0Ff90774D0C6Bb92e5C5c8b4461F7';
+export const SWAP_FEE = 3000; // 3%
+export const QUOTE_TOKEN_CONTRACT =
+  '0x78D78E420Da98ad378D7799bE8f4AF69033EB077';
+export const WRAPPED_TOKEN_CONTRACT =
+  '0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c';
