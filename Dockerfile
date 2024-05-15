@@ -8,7 +8,9 @@ RUN npm run build
 
 FROM public.ecr.aws/docker/library/node:20-alpine as base
 WORKDIR /app
+COPY --from=builder /app/certs ./certs
 COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/.env ./.env
 COPY --from=builder /app/package.json ./package.json
 COPY --from=builder /app/package-lock.json ./package-lock.json
 
