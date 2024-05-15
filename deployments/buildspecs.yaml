@@ -21,8 +21,6 @@ phases:
     commands:
       - echo Build started on `date`
       - echo Building the Docker image.
-      - echo Move to web3-wallet-backend-folder
-      - cd web3-wallet-backend
       - docker build -t $REPOSITORY_URI:latest .
       - docker tag $REPOSITORY_URI:latest $REPOSITORY_URI:$IMAGE_TAG
   post_build:
@@ -33,4 +31,4 @@ phases:
       - echo write definitions file...
       - printf '[{"name":"web3-wallet-backend","imageUri":"%s"}]' $REPOSITORY_URI:$IMAGE_TAG > imagedefinitions.json
 artifacts:
-  files: ./web3-wallet-backend/imagedefinitions.json
+  files: imagedefinitions.json
