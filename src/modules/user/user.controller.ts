@@ -65,11 +65,16 @@ export class UserController {
       networks: {
         networkSwap: true,
       },
-      currentSelectedNetwork: true,
+      currentSelectedNetwork: {
+        networkSwap: true,
+      },
     });
     this.logger.log('get me', id);
 
-    return generateResponse('success', omit(response, ['secret', 'password']));
+    return generateResponse(
+      'success',
+      omit(response, ['secret', 'password', 'pushNotificationTokens']),
+    );
   }
 
   @Get('me/tokens')

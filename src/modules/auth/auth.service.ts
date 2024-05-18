@@ -109,13 +109,13 @@ export class AuthService {
       );
     }
 
-    const token = this.$signTokens({
+    const tokens = this.$signTokens({
       id: user.id,
       address: user.address,
     });
 
     return generateResponse('success', {
-      token,
+      tokens,
     });
   }
 
@@ -191,6 +191,8 @@ export class AuthService {
       body.userId,
       biometricPublicKey,
     );
+
+    console.log({ isVerified });
 
     if (!isVerified) {
       throw new BadRequestException(ERROR_MAP.INVALID_SIGNATURE);
