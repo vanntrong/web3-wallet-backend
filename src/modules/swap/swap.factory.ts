@@ -17,6 +17,7 @@ import {
 } from './swap.type';
 import { Web3Account } from 'web3-eth-accounts';
 import * as tokenABI from '@/contracts/tokenContract.json';
+import { from, retry } from 'rxjs';
 
 abstract class Swap {
   abstract swap(
@@ -115,38 +116,45 @@ class SwapNativeToken extends Swap {
   }: TSwapNativeTokenData): Promise<any> {
     const web3 = new Web3(rpcURL);
 
-    const {
-      amountInWei,
-      transactionFee,
-      maxFeePerGas,
-      maxPriorityFeePerGas,
-      payableMethod,
-    } = await this.getEstimateGas({
-      data,
-      contract,
-      receiverAddress,
-      contractAddress,
-      rpcURL,
+    const promise = new Promise(async (resolve, reject) => {
+      const {
+        amountInWei,
+        transactionFee,
+        maxFeePerGas,
+        maxPriorityFeePerGas,
+        payableMethod,
+      } = await this.getEstimateGas({
+        data,
+        contract,
+        receiverAddress,
+        contractAddress,
+        rpcURL,
+      });
+
+      const finalValue = this.web3Service.getFinalAmount(
+        amountInWei,
+        transactionFee,
+        nativeBalance,
+      );
+
+      const signedTx = await account.signTransaction({
+        maxFeePerGas,
+        maxPriorityFeePerGas,
+        from: receiverAddress,
+        to: contractAddress,
+        value: finalValue,
+        data: payableMethod.encodeABI(),
+      });
+
+      resolve(
+        web3.eth.sendSignedTransaction(
+          signedTx.rawTransaction as unknown as Bytes,
+        ),
+      );
     });
 
-    const finalValue = this.web3Service.getFinalAmount(
-      amountInWei,
-      transactionFee,
-      nativeBalance,
-    );
+    const response = await from(promise).pipe(retry(3)).toPromise();
 
-    const signedTx = await account.signTransaction({
-      maxFeePerGas,
-      maxPriorityFeePerGas,
-      from: receiverAddress,
-      to: contractAddress,
-      value: finalValue,
-      data: payableMethod.encodeABI(),
-    });
-
-    const response = await web3.eth.sendSignedTransaction(
-      signedTx.rawTransaction as unknown as Bytes,
-    );
     console.log(response);
 
     return;
@@ -258,47 +266,55 @@ class SwapERC20Token extends Swap {
         isSwapERC20ToETH = true;
       }
 
-      const {
-        transactionFee,
-        maxFeePerGas,
-        maxPriorityFeePerGas,
-        payableMethod,
-      } = await this.getEstimateGas({
-        data,
-        contract,
-        receiverAddress,
-        contractAddress,
-        rpcURL,
-        account,
+      const promise = new Promise(async (resolve, reject) => {
+        const {
+          transactionFee,
+          maxFeePerGas,
+          maxPriorityFeePerGas,
+          payableMethod,
+        } = await this.getEstimateGas({
+          data,
+          contract,
+          receiverAddress,
+          contractAddress,
+          rpcURL,
+          account,
+        });
+
+        const balance = await web3.eth.getBalance(account.address);
+
+        if (transactionFee > balance) {
+          throw new BadRequestException(ERROR_MAP.INSUFFICIENT_BALANCE);
+        }
+
+        const signedTx = await account.signTransaction({
+          maxFeePerGas,
+          maxPriorityFeePerGas,
+          from: receiverAddress,
+          to: contractAddress,
+          data: payableMethod.encodeABI(),
+        });
+
+        resolve(
+          web3.eth.sendSignedTransaction(
+            signedTx.rawTransaction as unknown as Bytes,
+          ),
+        );
       });
 
-      const balance = await web3.eth.getBalance(account.address);
-
-      if (transactionFee > balance) {
-        throw new BadRequestException(ERROR_MAP.INSUFFICIENT_BALANCE);
-      }
-
-      console.log({ maxFeePerGas, maxPriorityFeePerGas });
-
-      const signedTx = await account.signTransaction({
-        maxFeePerGas,
-        maxPriorityFeePerGas,
-        from: receiverAddress,
-        to: contractAddress,
-        data: payableMethod.encodeABI(),
-      });
-
-      const response = await web3.eth.sendSignedTransaction(
-        signedTx.rawTransaction as unknown as Bytes,
-      );
+      const response = await from(promise).pipe(retry(3)).toPromise();
       console.log(response);
 
       if (isSwapERC20ToETH) {
-        await this.unwrap({
-          wrappedTokenAddress,
-          account,
-          rpcURL,
-        });
+        await from(
+          this.unwrap({
+            wrappedTokenAddress,
+            account,
+            rpcURL,
+          }),
+        )
+          .pipe(retry(3))
+          .toPromise();
       }
     } catch (error) {
       throw error;

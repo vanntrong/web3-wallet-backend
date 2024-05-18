@@ -9,6 +9,7 @@ import {
 } from './transaction.dto';
 import { Web3Service } from '../web3/web3.service';
 import { omit } from 'lodash';
+import { from, retry } from 'rxjs';
 
 export enum TransactionTokenType {
   ERC20 = 'ERC20',
@@ -96,38 +97,49 @@ class TransactionNativeToken extends Transaction {
       web3.eth.getBalance(account.address),
     ]);
 
-    const { maxFeePerGas, maxFeePerGasGwei, maxPriorityFeePerGas } =
-      await this.web3Service.$getTransactionMaxFeePerGas({
-        baseFee: data.baseFee,
-        maxPriorityFeePerGas: data.maxPriorityFeePerGas,
-        rpcURL,
-      });
+    const promise: Promise<any> = new Promise(async (resolve, reject) => {
+      try {
+        const { maxFeePerGas, maxFeePerGasGwei, maxPriorityFeePerGas } =
+          await this.web3Service.$getTransactionMaxFeePerGas({
+            baseFee: data.baseFee,
+            maxPriorityFeePerGas: data.maxPriorityFeePerGas,
+            rpcURL,
+          });
 
-    const transactionFee = this.web3Service.$calculateTransactionFee({
-      gasEstimate,
-      maxFeePerGas: maxFeePerGasGwei,
+        const transactionFee = this.web3Service.$calculateTransactionFee({
+          gasEstimate,
+          maxFeePerGas: maxFeePerGasGwei,
+        });
+
+        console.log('gasEstimate', gasEstimate);
+        console.log('transactionFee', transactionFee);
+        console.log('balance', balance);
+
+        const signedTx = await account.signTransaction({
+          ...rawTransaction,
+          gas: gasEstimate,
+          gasLimit: gasEstimate,
+          maxFeePerGas,
+          maxPriorityFeePerGas,
+          value: this.web3Service.getFinalAmount(
+            amountInWei,
+            transactionFee,
+            balance,
+          ),
+        });
+
+        resolve(
+          web3.eth.sendSignedTransaction(
+            signedTx.rawTransaction as unknown as Bytes,
+          ),
+        );
+      } catch (error) {
+        reject(error);
+        // throw error;
+      }
     });
 
-    console.log('gasEstimate', gasEstimate);
-    console.log('transactionFee', transactionFee);
-    console.log('balance', balance);
-
-    const signedTx = await account.signTransaction({
-      ...rawTransaction,
-      gas: gasEstimate,
-      gasLimit: gasEstimate,
-      maxFeePerGas,
-      maxPriorityFeePerGas,
-      value: this.web3Service.getFinalAmount(
-        amountInWei,
-        transactionFee,
-        balance,
-      ),
-    });
-
-    return web3.eth.sendSignedTransaction(
-      signedTx.rawTransaction as unknown as Bytes,
-    );
+    return from(promise).pipe(retry(3)).toPromise();
   }
 }
 
@@ -193,37 +205,47 @@ class TransactionERC20Token extends Transaction {
       web3.eth.getBalance(account.address),
     ]);
 
-    const { maxFeePerGas, maxPriorityFeePerGas, maxFeePerGasGwei } =
-      await this.web3Service.$getTransactionMaxFeePerGas({
-        baseFee: data.baseFee,
-        maxPriorityFeePerGas: data.maxPriorityFeePerGas,
-        rpcURL,
-      });
+    const promise: Promise<any> = new Promise(async (resolve, reject) => {
+      try {
+        const { maxFeePerGas, maxPriorityFeePerGas, maxFeePerGasGwei } =
+          await this.web3Service.$getTransactionMaxFeePerGas({
+            baseFee: data.baseFee,
+            maxPriorityFeePerGas: data.maxPriorityFeePerGas,
+            rpcURL,
+          });
 
-    const transactionFee = this.web3Service.$calculateTransactionFee({
-      gasEstimate,
-      maxFeePerGas: maxFeePerGasGwei,
+        const transactionFee = this.web3Service.$calculateTransactionFee({
+          gasEstimate,
+          maxFeePerGas: maxFeePerGasGwei,
+        });
+
+        console.log('gasEstimate', gasEstimate);
+        console.log('transactionFee', transactionFee);
+        console.log('balance', balance);
+
+        if (transactionFee > balance) {
+          throw new BadRequestException(ERROR_MAP.INSUFFICIENT_BALANCE);
+        }
+
+        const signedTx = await account.signTransaction({
+          ...rawTransaction,
+          gas: gasEstimate,
+          gasLimit: gasEstimate,
+          maxFeePerGas,
+          maxPriorityFeePerGas,
+        });
+
+        resolve(
+          web3.eth.sendSignedTransaction(
+            signedTx.rawTransaction as unknown as Bytes,
+          ),
+        );
+      } catch (error) {
+        reject(error);
+      }
     });
 
-    console.log('gasEstimate', gasEstimate);
-    console.log('transactionFee', transactionFee);
-    console.log('balance', balance);
-
-    if (transactionFee > balance) {
-      throw new BadRequestException(ERROR_MAP.INSUFFICIENT_BALANCE);
-    }
-
-    const signedTx = await account.signTransaction({
-      ...rawTransaction,
-      gas: gasEstimate,
-      gasLimit: gasEstimate,
-      maxFeePerGas,
-      maxPriorityFeePerGas,
-    });
-
-    return web3.eth.sendSignedTransaction(
-      signedTx.rawTransaction as unknown as Bytes,
-    );
+    return from(promise).pipe(retry(3)).toPromise();
   }
 }
 

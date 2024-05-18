@@ -16,7 +16,6 @@ import { Server } from 'ws';
 import {
   CreateTransactionDto,
   EstimateGasDto,
-  QueryUserLastSentTransactionsDto,
   QueryUserTransactionsDto,
 } from './transaction.dto';
 import { TransactionService } from './transaction.service';
