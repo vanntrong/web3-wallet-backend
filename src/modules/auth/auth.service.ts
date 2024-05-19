@@ -97,7 +97,7 @@ export class AuthService {
       throw new NotFoundException(ERROR_MAP.INVALID_IDENTIFY_OR_PASSWORD);
 
     if (data.biometricPublicKey) {
-      this.userSecretRepository.update(
+      await this.userSecretRepository.update(
         {
           user: {
             id: user.id,
