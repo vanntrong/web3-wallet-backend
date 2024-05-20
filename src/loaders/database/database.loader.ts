@@ -21,13 +21,13 @@ export class DatabaseLoader {
       type: 'postgres',
       entities: ['dist/entities/**/*.entity{.ts,.js}'],
       synchronize: true,
-      ssl: {
-        ca: fs.readFileSync(
-          path
-            .join(__dirname, '../../../certs/ap-southeast-1-bundle.pem')
-            .toString(),
-        ),
-      },
+      //  ssl: {
+      //   ca: fs.readFileSync(
+      //     path
+      //       .join(__dirname, '../../../certs/ap-southeast-1-bundle.pem')
+      //       .toString(),
+      //   ),
+      // },
       // logging: true,
     });
   }
