@@ -17,7 +17,7 @@ import {
 } from './swap.type';
 import { Web3Account } from 'web3-eth-accounts';
 import * as tokenABI from '@/contracts/tokenContract.json';
-import { from, retry } from 'rxjs';
+import { retry } from '@/utils/retry';
 
 abstract class Swap {
   abstract swap(
@@ -116,7 +116,7 @@ class SwapNativeToken extends Swap {
   }: TSwapNativeTokenData): Promise<any> {
     const web3 = new Web3(rpcURL);
 
-    const promise = new Promise(async (resolve, reject) => {
+    const promise = async () => {
       const {
         amountInWei,
         transactionFee,
@@ -146,16 +146,14 @@ class SwapNativeToken extends Swap {
         data: payableMethod.encodeABI(),
       });
 
-      resolve(
-        web3.eth.sendSignedTransaction(
-          signedTx.rawTransaction as unknown as Bytes,
-        ),
+      return web3.eth.sendSignedTransaction(
+        signedTx.rawTransaction as unknown as Bytes,
       );
-    });
+    };
 
-    const response = await from(promise).pipe(retry(3)).toPromise();
+    const response = await retry(promise);
 
-    console.log(response);
+    console.log('response', response);
 
     return;
   }
@@ -266,7 +264,7 @@ class SwapERC20Token extends Swap {
         isSwapERC20ToETH = true;
       }
 
-      const promise = new Promise(async (resolve, reject) => {
+      const promise = async () => {
         const {
           transactionFee,
           maxFeePerGas,
@@ -295,26 +293,22 @@ class SwapERC20Token extends Swap {
           data: payableMethod.encodeABI(),
         });
 
-        resolve(
-          web3.eth.sendSignedTransaction(
-            signedTx.rawTransaction as unknown as Bytes,
-          ),
+        web3.eth.sendSignedTransaction(
+          signedTx.rawTransaction as unknown as Bytes,
         );
-      });
+      };
 
-      const response = await from(promise).pipe(retry(3)).toPromise();
+      const response = await retry(promise);
       console.log(response);
 
       if (isSwapERC20ToETH) {
-        await from(
+        await retry(() =>
           this.unwrap({
             wrappedTokenAddress,
             account,
             rpcURL,
           }),
-        )
-          .pipe(retry(3))
-          .toPromise();
+        );
       }
     } catch (error) {
       throw error;

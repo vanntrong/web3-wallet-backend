@@ -2,14 +2,14 @@ import { ERROR_MAP } from '@/constants/errorMap';
 import * as tokenContractAbi from '@/contracts/tokenContract.json';
 import { stringToHex, toWei, weiToNumber } from '@/utils/converter';
 import { BadRequestException } from '@nestjs/common';
+import { omit } from 'lodash';
+import { retry } from '@/utils/retry';
 import Web3, { Bytes, TransactionReceipt } from 'web3';
+import { Web3Service } from '../web3/web3.service';
 import {
   CreateTransactionERC20Dto,
   CreateTransactionNetworkDto,
 } from './transaction.dto';
-import { Web3Service } from '../web3/web3.service';
-import { omit } from 'lodash';
-import { from, retry } from 'rxjs';
 
 export enum TransactionTokenType {
   ERC20 = 'ERC20',
@@ -88,7 +88,6 @@ class TransactionNativeToken extends Transaction {
       stringToHex(data.privateKey),
     );
     if (!account) throw new BadRequestException(ERROR_MAP.ACCOUNT_NOT_FOUND);
-    console.log('rawTransaction', rawTransaction);
 
     const [gasEstimate, balance] = await Promise.all([
       // remove from because when we send all balance, estimate gas will thrown unexpected error
@@ -97,49 +96,42 @@ class TransactionNativeToken extends Transaction {
       web3.eth.getBalance(account.address),
     ]);
 
-    const promise: Promise<any> = new Promise(async (resolve, reject) => {
-      try {
-        const { maxFeePerGas, maxFeePerGasGwei, maxPriorityFeePerGas } =
-          await this.web3Service.$getTransactionMaxFeePerGas({
-            baseFee: data.baseFee,
-            maxPriorityFeePerGas: data.maxPriorityFeePerGas,
-            rpcURL,
-          });
-
-        const transactionFee = this.web3Service.$calculateTransactionFee({
-          gasEstimate,
-          maxFeePerGas: maxFeePerGasGwei,
+    const promise = async () => {
+      const { maxFeePerGas, maxFeePerGasGwei, maxPriorityFeePerGas } =
+        await this.web3Service.$getTransactionMaxFeePerGas({
+          baseFee: data.baseFee,
+          maxPriorityFeePerGas: data.maxPriorityFeePerGas,
+          rpcURL,
         });
 
-        console.log('gasEstimate', gasEstimate);
-        console.log('transactionFee', transactionFee);
-        console.log('balance', balance);
+      const transactionFee = this.web3Service.$calculateTransactionFee({
+        gasEstimate,
+        maxFeePerGas: maxFeePerGasGwei,
+      });
 
-        const signedTx = await account.signTransaction({
-          ...rawTransaction,
-          gas: gasEstimate,
-          gasLimit: gasEstimate,
-          maxFeePerGas,
-          maxPriorityFeePerGas,
-          value: this.web3Service.getFinalAmount(
-            amountInWei,
-            transactionFee,
-            balance,
-          ),
-        });
+      console.log('gasEstimate', gasEstimate);
+      console.log('transactionFee', transactionFee);
+      console.log('balance', balance);
 
-        resolve(
-          web3.eth.sendSignedTransaction(
-            signedTx.rawTransaction as unknown as Bytes,
-          ),
-        );
-      } catch (error) {
-        reject(error);
-        // throw error;
-      }
-    });
+      const signedTx = await account.signTransaction({
+        ...rawTransaction,
+        gas: gasEstimate,
+        gasLimit: gasEstimate,
+        maxFeePerGas,
+        maxPriorityFeePerGas,
+        value: this.web3Service.getFinalAmount(
+          amountInWei,
+          transactionFee,
+          balance,
+        ),
+      });
 
-    return from(promise).pipe(retry(3)).toPromise();
+      return web3.eth.sendSignedTransaction(
+        signedTx.rawTransaction as unknown as Bytes,
+      );
+    };
+
+    return retry(promise);
   }
 }
 
@@ -205,47 +197,41 @@ class TransactionERC20Token extends Transaction {
       web3.eth.getBalance(account.address),
     ]);
 
-    const promise: Promise<any> = new Promise(async (resolve, reject) => {
-      try {
-        const { maxFeePerGas, maxPriorityFeePerGas, maxFeePerGasGwei } =
-          await this.web3Service.$getTransactionMaxFeePerGas({
-            baseFee: data.baseFee,
-            maxPriorityFeePerGas: data.maxPriorityFeePerGas,
-            rpcURL,
-          });
-
-        const transactionFee = this.web3Service.$calculateTransactionFee({
-          gasEstimate,
-          maxFeePerGas: maxFeePerGasGwei,
+    const promise = async () => {
+      const { maxFeePerGas, maxPriorityFeePerGas, maxFeePerGasGwei } =
+        await this.web3Service.$getTransactionMaxFeePerGas({
+          baseFee: data.baseFee,
+          maxPriorityFeePerGas: data.maxPriorityFeePerGas,
+          rpcURL,
         });
 
-        console.log('gasEstimate', gasEstimate);
-        console.log('transactionFee', transactionFee);
-        console.log('balance', balance);
+      const transactionFee = this.web3Service.$calculateTransactionFee({
+        gasEstimate,
+        maxFeePerGas: maxFeePerGasGwei,
+      });
 
-        if (transactionFee > balance) {
-          throw new BadRequestException(ERROR_MAP.INSUFFICIENT_BALANCE);
-        }
+      console.log('gasEstimate', gasEstimate);
+      console.log('transactionFee', transactionFee);
+      console.log('balance', balance);
 
-        const signedTx = await account.signTransaction({
-          ...rawTransaction,
-          gas: gasEstimate,
-          gasLimit: gasEstimate,
-          maxFeePerGas,
-          maxPriorityFeePerGas,
-        });
-
-        resolve(
-          web3.eth.sendSignedTransaction(
-            signedTx.rawTransaction as unknown as Bytes,
-          ),
-        );
-      } catch (error) {
-        reject(error);
+      if (transactionFee > balance) {
+        throw new BadRequestException(ERROR_MAP.INSUFFICIENT_BALANCE);
       }
-    });
 
-    return from(promise).pipe(retry(3)).toPromise();
+      const signedTx = await account.signTransaction({
+        ...rawTransaction,
+        gas: gasEstimate,
+        gasLimit: gasEstimate,
+        maxFeePerGas,
+        maxPriorityFeePerGas,
+      });
+
+      return web3.eth.sendSignedTransaction(
+        signedTx.rawTransaction as unknown as Bytes,
+      );
+    };
+
+    return retry(promise);
   }
 }
 
