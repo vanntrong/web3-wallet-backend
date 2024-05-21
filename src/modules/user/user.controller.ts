@@ -69,7 +69,6 @@ export class UserController {
         networkSwap: true,
       },
     });
-    this.logger.log('get me', id);
 
     return generateResponse(
       'success',

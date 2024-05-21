@@ -3,11 +3,14 @@ import { NestFactory } from '@nestjs/core';
 import { IoAdapter } from '@nestjs/platform-socket.io';
 import { AppModule } from './app.module';
 import { AllExceptionsFilter } from './errors/http-execption.filter';
+import * as morgan from 'morgan';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   app.useGlobalPipes(new ValidationPipe({ transform: true }));
   app.useGlobalFilters(new AllExceptionsFilter());
+  app.use(morgan('combined'));
+
   // eslint-disable-next-line @typescript-eslint/ban-ts-comment
   // @ts-ignore
   app.useWebSocketAdapter(new IoAdapter(app));
