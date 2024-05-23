@@ -8,6 +8,7 @@ import {
   Get,
   Logger,
   ParseFilePipe,
+  ParseUUIDPipe,
   Patch,
   Query,
   UploadedFile,
@@ -80,10 +81,9 @@ export class UserController {
   @UseGuards(JwtAuthGuard)
   async getMyToken(
     @User('id') id: string,
-    @Query('networkId') networkId: string,
+    @Query('networkId', ParseUUIDPipe) networkId: string,
   ) {
     const response = await this.userService.getUserTokens(id, networkId);
-
     return generateResponse('success', response);
   }
 

@@ -1,4 +1,11 @@
-import { Body, Controller, Param, Post, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Param,
+  ParseUUIDPipe,
+  Post,
+  UseGuards,
+} from '@nestjs/common';
 import { NetworkService } from './network.service';
 import { JwtAuthGuard } from '@/guards/jwt.guard';
 import { User } from '@/decorators';
@@ -18,7 +25,7 @@ export class NetworkController {
   @Post(':id/swap')
   @UseGuards(JwtAuthGuard)
   async createNetworkSwap(
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @Body() body: CreateNetworkSwapDto,
   ) {
     const response = await this.networkService.createNetworkSwap(id, body);
