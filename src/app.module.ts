@@ -22,7 +22,6 @@ import { ExpoModule } from './modules/expo/expo.module';
     ConfigModule.forRoot({
       envFilePath: '.env',
       isGlobal: true,
-      // ignoreEnvFile: true,
       load: [configuration],
     }),
     DatabaseLoader.init(),
