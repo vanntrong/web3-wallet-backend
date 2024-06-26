@@ -48,6 +48,8 @@ export class SwapService {
         });
       }
 
+      console.log('data.tokenOut', data);
+
       if (!data.tokenOut) {
         if (!network.networkSwap.wrappedTokenAddress)
           throw new BadRequestException(ERROR_MAP.SWAP_DOES_NOT_EXIST);
@@ -63,6 +65,7 @@ export class SwapService {
       const response: TSwapQuoteResponse = await contract.methods
         .quoteExactInputSingle({
           tokenIn: data.tokenIn ?? network.networkSwap.wrappedTokenAddress,
+          // tokenIn: '0xfff9976782d46cc05630d1f6ebab18b2324d6b14',
           tokenOut: data.tokenOut,
           amountIn: toWei(
             data.amount,
@@ -72,6 +75,8 @@ export class SwapService {
           sqrtPriceLimitX96: '0',
         })
         .call();
+
+      console.log('response', response);
 
       const amountOut = weiToNumber(
         response.amountOut,

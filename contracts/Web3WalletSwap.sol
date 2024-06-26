@@ -9,9 +9,10 @@ import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 
 contract Web3WalletSwap {
     ISwapRouter02 public immutable swapRouter;
-    // address constant private wrappedToken = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2; // WETH use for Wrap ETH from ETHER network
     address private constant wrappedToken =
-        0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14; // WETH use for Wrap ETH from ETH Sepolia network
+        0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2; // WETH use for Wrap ETH from ETHER network
+    // address private constant wrappedToken =
+    //     0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14; // WETH use for Wrap ETH from ETH Sepolia network
     // address private constant wrappedToken =
     //     0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c; // WBNB use for Wrap BNB from BNB network
     // address constant private wrappedToken = 0x82aF49447D8a07e3bd95BD0d56f35241523fBab1; // WETH use for Wrap ETH from Arbitrum network

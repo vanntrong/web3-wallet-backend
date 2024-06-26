@@ -312,14 +312,6 @@ class SwapERC20Token extends Swap {
       }
     } catch (error) {
       throw error;
-      // throw new Error(
-      //   ERROR_WEB3_MAP[error?.innerError?.code] || ERROR_MAP.CANNOT_SWAP_TOKEN,
-      // );
-      // // console.log('asdasd', error);
-      // // throw new BadRequestException(ERROR_MAP.CANNOT_SWAP_TOKEN);
-      // throw new BadRequestException(
-      //   ERROR_WEB3_MAP[error?.innerError?.code] || ERROR_MAP.CANNOT_SWAP_TOKEN,
-      // );
     }
   }
 
